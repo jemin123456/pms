@@ -2,7 +2,7 @@ const Policy = require('./Policy');
 
 class ProjectPolicy extends Policy {
   canCreate() {
-    return this.isAdmin();
+    return this.isAdmin() || this.role === 'project manager';
   }
 
   canRead(project) {
@@ -11,13 +11,13 @@ class ProjectPolicy extends Policy {
   }
 
   canUpdate(project) {
-    if (!project) return this.isAdmin();
-    return this.isAdmin() && project.tenantId.toString() === this.tenantId.toString();
+    if (!project) return this.isAdmin() || this.role === 'project manager';
+    return (this.isAdmin() || this.role === 'project manager') && project.tenantId.toString() === this.tenantId.toString();
   }
 
   canDelete(project) {
-    if (!project) return this.isAdmin();
-    return this.isAdmin() && project.tenantId.toString() === this.tenantId.toString();
+    if (!project) return this.isAdmin() || this.role === 'project manager';
+    return (this.isAdmin() || this.role === 'project manager') && project.tenantId.toString() === this.tenantId.toString();
   }
 }
 

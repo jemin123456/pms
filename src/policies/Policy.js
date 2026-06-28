@@ -6,11 +6,11 @@ class Policy {
   }
 
   isAdmin() {
-    return this.role === 'admin';
+    return this.role === 'super admin' || this.role === 'admin';
   }
 
   isEmployee() {
-    return this.role === 'employee';
+    return this.role !== 'super admin' && this.role !== 'admin';
   }
 }
 
