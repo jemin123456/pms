@@ -144,7 +144,7 @@ exports.login = async (req, res, next) => {
     }
 
     await user.populate("memberships.tenantId", "name slug");
-
+    
     sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);
@@ -245,8 +245,8 @@ exports.addEmployee = async (req, res, next) => {
         .json({ success: false, message: "User ID is required" });
     }
 
-    // Verify requesting user is admin in active workspace
-    if (req.userRole !== "admin") {
+    // Verify requesting user is admin or super admin in active workspace
+    if (req.userRole !== "super admin" && req.userRole !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Access denied: Only administrators can add employees",
