@@ -3,74 +3,52 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const compression = require('compression');
 const morgan = require('morgan');
-const logger = require('./utils/logger');
-const errorHandler = require('./middlewares/errorHandler');
-const { NotFoundError } = require('./utils/errors');
-
-// Import router placeholder
-const authRouter = require('./modules/auth/routes');
-const projectRouter = require('./modules/project/routes');
+const errorHandler = require('./middleware/error.middleware');
 
 const app = express();
 
-// Security Middlewares
+// Security HTTP headers
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:", "*"],
-        connectSrc: ["'self'", "ws:", "wss:"],
-      },
-    },
+    contentSecurityPolicy: false,
   })
 );
 
-// CORS configuration (allow credentials for refresh cookies)
+// Logging
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+
+// CORS configuration
 app.use(
   cors({
-    origin: true, // Allow all origins for development, adjust for production
+    origin: true,
     credentials: true,
   })
 );
 
-// Compression & Body parsing
-app.use(compression());
+// Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Request logging (Morgan via Winston)
-const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
-app.use(
-  morgan(morganFormat, {
-    stream: {
-      write: (message) => logger.info(message.trim()),
-    },
-  })
-);
-
-// Serve Frontend Static Files
+// Serve static assets
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Register Routes
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/projects', projectRouter);
+// Mount routers
+app.use('/api/auth', require('./modules/auth/auth.routes'));
+app.use('/api/projects', require('./modules/project/project.routes'));
 
-// Fallback: If request is not for API but doesn't match static files, serve SPA index.html
+// Catch-all route to serve static files
 app.get('*', (req, res, next) => {
   if (req.originalUrl.startsWith('/api')) {
-    return next(new NotFoundError(`Route ${req.originalUrl} not found`));
+    return next();
   }
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Global Error Handler
+// Centralized error handling
 app.use(errorHandler);
 
 module.exports = app;

@@ -1,103 +1,86 @@
-require('dotenv').config();
+const dotenv = require('dotenv');
 const mongoose = require('mongoose');
-const Role = require('../modules/user/roleModel');
-const logger = require('../utils/logger');
 
-const roles = [
-  {
-    name: 'Super Admin',
-    description: 'Complete control over the system, roles, permissions, and audit logs.',
-    permissions: ['manage_all'],
-  },
-  {
-    name: 'Admin',
-    description: 'System administration, user creation, standard reports, and configurations.',
-    permissions: [
-      'read_user', 'create_user', 'update_user', 'delete_user',
-      'read_project', 'create_project', 'update_project', 'delete_project',
-      'read_task', 'create_task', 'update_task', 'delete_task',
-      'read_team', 'create_team', 'update_team', 'delete_team',
-      'read_report', 'export_report',
-      'read_attendance', 'manage_attendance',
-      'read_leave', 'manage_leave',
-      'read_budget', 'manage_budget'
-    ],
-  },
-  {
-    name: 'Project Manager',
-    description: 'Manages assigned projects, project teams, tasks, and workloads.',
-    permissions: [
-      'read_user',
-      'read_project', 'create_project', 'update_project',
-      'read_task', 'create_task', 'update_task', 'delete_task',
-      'read_team', 'create_team', 'update_team',
-      'read_report', 'export_report',
-      'read_attendance',
-      'read_leave', 'approve_leave',
-      'read_budget', 'create_budget', 'update_budget'
-    ],
-  },
-  {
-    name: 'Team Lead',
-    description: 'Leads sprint planning, tasks assignment, and workload tracking.',
-    permissions: [
-      'read_user',
-      'read_project',
-      'read_task', 'create_task', 'update_task',
-      'read_team',
-      'read_report',
-      'read_attendance',
-      'read_leave'
-    ],
-  },
-  {
-    name: 'Employee',
-    description: 'Regular team member working on tasks, logging time and attendance.',
-    permissions: [
-      'read_user',
-      'read_project',
-      'read_task', 'update_task_status',
-      'read_attendance', 'log_attendance',
-      'read_leave', 'apply_leave',
-      'log_time'
-    ],
-  },
-  {
-    name: 'Client',
-    description: 'External client accessing project progress, deliverables, and reports.',
-    permissions: [
-      'read_project',
-      'read_task',
-      'read_report',
-      'approve_deliverables',
-      'create_comment'
-    ],
-  },
-];
+dotenv.config();
+
+const connectDB = require('../config/db');
+const User = require('../modules/user/user.model');
+const Tenant = require('../modules/tenant/tenant.model');
 
 const seedRoles = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI;
-    if (!mongoUri) {
-      throw new Error('MONGO_URI is not defined in environment variables.');
+    await connectDB();
+    console.log('Seeder connected to MongoDB.');
+
+    // Find the first registered user
+    let user = await User.findOne();
+    if (!user) {
+      console.log('No user found in the database. Please register a user first on the registration page.');
+      process.exit(0);
     }
 
-    await mongoose.connect(mongoUri);
-    logger.info('Connected to MongoDB for seeding roles...');
+    console.log(`Found user: ${user.name} (${user.email})`);
 
-    // Clear existing roles
-    await Role.deleteMany({});
-    logger.info('Cleared existing roles.');
+    // Create Beta Software Labs tenant (Employee workspace)
+    let betaTenant = await Tenant.findOne({ slug: 'beta-software' });
+    if (!betaTenant) {
+      betaTenant = await Tenant.create({
+        name: 'Beta Software Labs',
+        slug: 'beta-software',
+      });
+      console.log(`Created Tenant: ${betaTenant.name}`);
+    } else {
+      console.log(`Tenant already exists: ${betaTenant.name}`);
+    }
 
-    // Insert standard roles
-    await Role.insertMany(roles);
-    logger.info('Successfully seeded default roles and permissions!');
+    // Create Gamma Tech Solutions tenant (Admin workspace)
+    let gammaTenant = await Tenant.findOne({ slug: 'gamma-tech' });
+    if (!gammaTenant) {
+      gammaTenant = await Tenant.create({
+        name: 'Gamma Tech Solutions',
+        slug: 'gamma-tech',
+      });
+      console.log(`Created Tenant: ${gammaTenant.name}`);
+    } else {
+      console.log(`Tenant already exists: ${gammaTenant.name}`);
+    }
 
-    await mongoose.disconnect();
-    logger.info('Disconnected from MongoDB.');
+    // Add memberships
+    const hasBeta = user.memberships.some(m => m.tenantId.toString() === betaTenant._id.toString());
+    const hasGamma = user.memberships.some(m => m.tenantId.toString() === gammaTenant._id.toString());
+
+    let updated = false;
+
+    if (!hasBeta) {
+      user.memberships.push({
+        tenantId: betaTenant._id,
+        role: 'employee', // Employee role (read-only)
+      });
+      console.log(`Added membership: ${betaTenant.name} as EMPLOYEE`);
+      updated = true;
+    }
+
+    if (!hasGamma) {
+      user.memberships.push({
+        tenantId: gammaTenant._id,
+        role: 'admin', // Admin role (read-write)
+      });
+      console.log(`Added membership: ${gammaTenant.name} as ADMIN`);
+      updated = true;
+    }
+
+    if (updated) {
+      await user.save();
+      console.log('User memberships updated successfully!');
+    } else {
+      console.log('User already has all memberships.');
+    }
+
+    console.log('Done!');
+    mongoose.connection.close();
     process.exit(0);
   } catch (error) {
-    logger.error(`Seeding failed: ${error.message}`);
+    console.error('Seeding error:', error);
     process.exit(1);
   }
 };

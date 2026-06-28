@@ -1,28 +1,21 @@
-require('dotenv').config();
-const app = require('./app');
+const dotenv = require('dotenv');
+// Load environment variables before anything else
+dotenv.config();
+
 const connectDB = require('./config/db');
-const logger = require('./utils/logger');
+const app = require('./app');
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  logger.error('UNCAUGHT EXCEPTION! Shutting down...');
-  logger.error(`${err.name}: ${err.message}\n${err.stack}`);
-  process.exit(1);
-});
-
-// Connect to Database
+// Connect to MongoDB Database
 connectDB();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3015;
+
 const server = app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 
-// Handle unhandled rejections
-process.on('unhandledRejection', (err) => {
-  logger.error('UNHANDLED REJECTION! Shutting down gracefully...');
-  logger.error(`${err.name}: ${err.message}\n${err.stack}`);
-  server.close(() => {
-    process.exit(1);
-  });
+// Handle unhandled promise rejections gracefully
+process.on('unhandledRejection', (err, promise) => {
+  console.error(`Unhandled Rejection Error: ${err.message}`);
+  server.close(() => process.exit(1));
 });

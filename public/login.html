@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Property Management System</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <div class="bg-decorations">
+      <div class="bg-blob blob-1"></div>
+      <div class="bg-blob blob-2"></div>
+    </div>
+
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-header">
+          <div class="auth-logo">PMS</div>
+          <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px">
+            Welcome Back
+          </h1>
+          <p class="auth-subtitle">
+            Sign in to manage your tenants and projects
+          </p>
+        </div>
+
+        <div id="alert-container" class="alert"></div>
+
+        <form id="login-form" novalidate>
+          <div class="form-group">
+            <label for="email" class="form-label">Email Address</label>
+            <div class="input-wrapper">
+              <input
+                type="email"
+                id="email"
+                class="form-control"
+                placeholder="name@example.com"
+                required
+              />
+              <div class="invalid-feedback">
+                Please enter a valid email address.
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">Password</label>
+            <div class="input-wrapper">
+              <input
+                type="password"
+                id="password"
+                class="form-control"
+                placeholder="••••••••"
+                required
+              />
+              <div class="invalid-feedback">Password is required.</div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">
+            Sign In
+          </button>
+        </form>
+
+        <div class="auth-footer">
+          Don't have an account?
+          <a href="register.html" class="auth-link">Register your company</a>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="js/auth.js"></script>
+  </body>
+</html>

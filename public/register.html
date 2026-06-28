@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register | IT Project Management System</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  
+  <div class="bg-decorations">
+    <div class="bg-blob blob-1"></div>
+    <div class="bg-blob blob-2"></div>
+  </div>
+
+  <div class="auth-wrapper" style="padding-top: 40px; padding-bottom: 40px;">
+    <div class="auth-card" style="max-width: 550px;">
+      <div class="auth-header">
+        <div class="auth-logo">PMS</div>
+        <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 8px;">Create an Account</h1>
+        <p class="auth-subtitle">Register your software company or create an individual profile</p>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div style="display: flex; gap: 12px; margin-bottom: 25px; background-color: var(--surface-hover); padding: 6px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <button type="button" id="tab-company" class="btn btn-primary" style="flex: 1; padding: 10px; font-size: 0.85rem; border-radius: 6px; box-shadow: none; transform: none;">Register Company</button>
+        <button type="button" id="tab-employee" class="btn btn-secondary" style="flex: 1; padding: 10px; font-size: 0.85rem; border-radius: 6px; box-shadow: none; transform: none; background: transparent;">Register User</button>
+      </div>
+
+      <div id="alert-container" class="alert"></div>
+
+      <form id="register-form" novalidate>
+        <!-- Registration Type Flag -->
+        <input type="hidden" id="registrationType" value="company">
+        
+        <h3 id="section-title-details" style="font-size: 1rem; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--primary-color);">Company Details</h3>
+        
+        <div id="company-name-group" class="form-group">
+          <label for="tenantName" class="form-label">Company Name</label>
+          <div class="input-wrapper">
+            <input type="text" id="tenantName" class="form-control" placeholder="e.g. Acme Tech Solutions" required>
+            <div class="invalid-feedback">Company name is required.</div>
+          </div>
+        </div>
+
+        <div id="company-slug-group" class="form-group">
+          <label id="slug-label" for="tenantSlug" class="form-label">Subdomain Slug</label>
+          <div class="input-wrapper">
+            <input type="text" id="tenantSlug" class="form-control" placeholder="e.g. acme-tech" required>
+            <div class="invalid-feedback">Slug is required and must contain alphanumeric/hyphens.</div>
+          </div>
+        </div>
+
+        <h3 style="font-size: 1rem; margin-top: 25px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--primary-color);">Your Credentials</h3>
+
+        <div class="form-group">
+          <label for="name" class="form-label">Your Name</label>
+          <div class="input-wrapper">
+            <input type="text" id="name" class="form-control" placeholder="e.g. John Doe" required>
+            <div class="invalid-feedback">Your name is required.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address</label>
+          <div class="input-wrapper">
+            <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+            <div class="invalid-feedback">Please enter a valid email address.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <div class="input-wrapper">
+            <input type="password" id="password" class="form-control" placeholder="Min 6 characters" required>
+            <div class="strength-meter">
+              <div id="strength-bar" class="strength-bar"></div>
+            </div>
+            <span id="strength-text" class="strength-text">Password Strength</span>
+            <div class="invalid-feedback">Password must be at least 6 characters.</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label">Confirm Password</label>
+          <div class="input-wrapper">
+            <input type="password" id="confirmPassword" class="form-control" placeholder="Re-enter password" required>
+            <div class="invalid-feedback">Passwords must match.</div>
+          </div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-block" style="margin-top: 10px;">Register Workspace</button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="login.html" class="auth-link">Sign In</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>
