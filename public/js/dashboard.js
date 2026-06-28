@@ -401,11 +401,19 @@ document.addEventListener("DOMContentLoaded", () => {
         <td><span class="tech-stack-tag">${escapeHtml(project.techStack)}</span></td>
         <td style="font-weight: 500;">$${Number(project.budget || 0).toLocaleString()}</td>
         <td><span class="badge ${badgeClass}">${project.status}</span></td>
-        <td>${actionsHtml}</td>
+        <td class="actions-cell">${actionsHtml}</td>
       `;
+
+      // ── Row click → open project detail page (skip action buttons) ──
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('.actions-cell')) return;
+        window.location.href = `/project.html?id=${project._id}`;
+      });
 
       projectTableBody.appendChild(tr);
     });
+
 
     // Add click listeners to actions
     document.querySelectorAll(".edit-project-btn").forEach((btn) => {

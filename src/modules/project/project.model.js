@@ -33,6 +33,20 @@ const projectSchema = new mongoose.Schema(
       required: [true, 'Tenant ID is required'],
       index: true,
     },
+    // Project-specific team members (explicitly added by admin/super admin)
+    members: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+          required: true,
+        },
+        addedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
