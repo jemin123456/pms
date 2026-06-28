@@ -165,10 +165,9 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
           Project Team
         </button>
-        <button class="tab-btn" data-tab="tasks" disabled title="Task management coming soon">
+        <button class="tab-btn" data-tab="tasks" role="tab">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
           Tasks
-          <span class="soon-badge">Soon</span>
         </button>
       </nav>
     </div>
@@ -279,12 +278,70 @@
         </div>
       </div>
 
-      <!-- Tasks Tab (locked) -->
+      <!-- Tasks Tab -->
       <div id="tab-tasks" class="tab-pane" role="tabpanel">
-        <div class="coming-soon-panel">
-          <span class="coming-soon-icon">🚀</span>
-          <h2>Tasks Module — Coming Soon</h2>
-          <p>Task management, assignments, and progress tracking will be available here.</p>
+        <div id="tasks-loader" class="page-loader" style="display:none;">
+          <div class="spinner"></div> Loading workspace tasks...
+        </div>
+        <div id="tasks-content" style="display:none;">
+          <div class="section-card">
+            <div class="section-header">
+              <div>
+                <h2 style="font-weight:600;font-size:1.15rem;">Project Tasks</h2>
+                <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:4px;">
+                  Create, assign, track priority, and update statuses of tasks.
+                </p>
+              </div>
+              <div style="display:flex;gap:10px;align-items:center;">
+                <span id="tasks-count-badge" class="badge badge-info">0 Tasks</span>
+                <button id="add-task-btn" class="btn btn-primary" style="padding:8px 16px;font-size:0.85rem;">
+                  + Add Task
+                </button>
+              </div>
+            </div>
+
+            <!-- Task Filters -->
+            <div style="display:flex;gap:15px;margin-bottom:20px;flex-wrap:wrap;background:rgba(255,255,255,0.02);padding:12px;border-radius:6px;border:1px solid rgba(255,255,255,0.05);">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:0.75rem;color:var(--text-secondary);font-weight:500;">Filter by Status</label>
+                <select id="filter-task-status" class="form-control" style="padding:4px 10px;font-size:0.82rem;width:150px;height:auto;background:var(--background-panel);">
+                  <option value="">All Statuses</option>
+                  <option value="Todo">Todo</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="On Hold">On Hold</option>
+                </select>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:0.75rem;color:var(--text-secondary);font-weight:500;">Filter by Priority</label>
+                <select id="filter-task-priority" class="form-control" style="padding:4px 10px;font-size:0.82rem;width:150px;height:auto;background:var(--background-panel);">
+                  <option value="">All Priorities</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Title & Description</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Assignee</th>
+                    <th>Due Date</th>
+                    <th style="width:160px;text-align:center;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tasks-table-body">
+                  <tr><td colspan="6" class="empty-state">No tasks created yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -357,6 +414,135 @@
           </div>
           <div class="modal-footer">
             <button type="button" id="ep-cancel-btn" class="btn btn-secondary">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Add Task Modal ── -->
+    <div id="add-task-modal" class="modal-overlay">
+      <div class="modal" style="max-width:560px;">
+        <div class="modal-header">
+          <h3 class="modal-title">Create Task</h3>
+          <button id="add-task-modal-close-x" class="btn-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <form id="add-task-form" novalidate>
+          <div class="modal-body">
+            <div id="add-task-alert" class="alert"></div>
+            <div class="form-group">
+              <label for="task-title" class="form-label">Task Title</label>
+              <div class="input-wrapper">
+                <input type="text" id="task-title" class="form-control" required placeholder="Describe task requirement..." />
+                <div class="invalid-feedback">Task title is required.</div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="task-description" class="form-label">Description</label>
+              <textarea id="task-description" class="form-control" rows="3" placeholder="Provide task context and instructions..."></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="form-group">
+                <label for="task-priority" class="form-label">Priority</label>
+                <select id="task-priority" class="form-control">
+                  <option value="Low">Low</option>
+                  <option value="Medium" selected>Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="task-status" class="form-label">Status</label>
+                <select id="task-status" class="form-control">
+                  <option value="Todo">Todo</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="On Hold">On Hold</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="form-group">
+                <label for="task-assignee" class="form-label">Assignee</label>
+                <select id="task-assignee" class="form-control">
+                  <option value="">Unassigned</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="task-duedate" class="form-label">Due Date</label>
+                <input type="date" id="task-duedate" class="form-control" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="add-task-cancel" class="btn btn-secondary">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Edit Task Modal ── -->
+    <div id="edit-task-modal" class="modal-overlay">
+      <div class="modal" style="max-width:560px;">
+        <div class="modal-header">
+          <h3 class="modal-title">Edit Task</h3>
+          <button id="edit-task-modal-close-x" class="btn-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <form id="edit-task-form" novalidate>
+          <input type="hidden" id="edit-task-id" />
+          <div class="modal-body">
+            <div id="edit-task-alert" class="alert"></div>
+            <div class="form-group class-full-fields">
+              <label for="et-title" class="form-label">Task Title</label>
+              <div class="input-wrapper">
+                <input type="text" id="et-title" class="form-control" required />
+                <div class="invalid-feedback">Task title is required.</div>
+              </div>
+            </div>
+            <div class="form-group class-full-fields">
+              <label for="et-description" class="form-label">Description</label>
+              <textarea id="et-description" class="form-control" rows="3"></textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="form-group class-full-fields">
+                <label for="et-priority" class="form-label">Priority</label>
+                <select id="et-priority" class="form-control">
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="et-status" class="form-label">Status</label>
+                <select id="et-status" class="form-control">
+                  <option value="Todo">Todo</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="On Hold">On Hold</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="class-full-fields">
+              <div class="form-group">
+                <label for="et-assignee" class="form-label">Assignee</label>
+                <select id="et-assignee" class="form-control">
+                  <option value="">Unassigned</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="et-duedate" class="form-label">Due Date</label>
+                <input type="date" id="et-duedate" class="form-control" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" id="edit-task-cancel" class="btn btn-secondary">Cancel</button>
             <button type="submit" class="btn btn-primary">Save Changes</button>
           </div>
         </form>

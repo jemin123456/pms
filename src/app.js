@@ -39,6 +39,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Mount routers
 app.use('/api/auth', require('./modules/auth/auth.routes'));
 app.use('/api/projects', require('./modules/project/project.routes'));
+app.use('/api/tasks', require('./modules/task/task.routes'));
 app.use('/api/user-management', require('./modules/user-management/user-management.routes'));
 
 // Catch-all route to serve static files

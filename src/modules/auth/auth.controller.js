@@ -144,7 +144,7 @@ exports.login = async (req, res, next) => {
     }
 
     await user.populate("memberships.tenantId", "name slug");
-    
+
     sendTokenResponse(user, 200, res);
   } catch (error) {
     next(error);

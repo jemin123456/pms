@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeRole     = 'developer';
   let currentProject = null;
   let teamLoaded     = false;
+  let tasksList      = [];
+  let projectMembers = [];
 
   // ─── DOM ─────────────────────────────────────────────────────────────────
   const topbarName     = document.getElementById('topbar-project-name');
@@ -68,6 +70,42 @@ document.addEventListener('DOMContentLoaded', () => {
   const epTechInput         = document.getElementById('ep-techstack');
   const epBudgetInput       = document.getElementById('ep-budget');
   const epStatusSelect      = document.getElementById('ep-status');
+
+  // Tasks Tab Elements
+  const tasksLoader        = document.getElementById('tasks-loader');
+  const tasksContent       = document.getElementById('tasks-content');
+  const tasksTableBody     = document.getElementById('tasks-table-body');
+  const tasksCountBadge    = document.getElementById('tasks-count-badge');
+  const addTaskBtn         = document.getElementById('add-task-btn');
+  const filterTaskStatus   = document.getElementById('filter-task-status');
+  const filterTaskPriority = document.getElementById('filter-task-priority');
+
+  // Add Task Modal Elements
+  const addTaskModal       = document.getElementById('add-task-modal');
+  const addTaskForm        = document.getElementById('add-task-form');
+  const addTaskAlert       = document.getElementById('add-task-alert');
+  const addTaskCloseX      = document.getElementById('add-task-modal-close-x');
+  const addTaskCancel      = document.getElementById('add-task-cancel');
+  const taskTitle          = document.getElementById('task-title');
+  const taskDescription    = document.getElementById('task-description');
+  const taskPriority       = document.getElementById('task-priority');
+  const taskStatus         = document.getElementById('task-status');
+  const taskAssignee       = document.getElementById('task-assignee');
+  const taskDueDate        = document.getElementById('task-duedate');
+
+  // Edit Task Modal Elements
+  const editTaskModal      = document.getElementById('edit-task-modal');
+  const editTaskForm       = document.getElementById('edit-task-form');
+  const editTaskAlert      = document.getElementById('edit-task-alert');
+  const editTaskCloseX     = document.getElementById('edit-task-modal-close-x');
+  const editTaskCancel     = document.getElementById('edit-task-cancel');
+  const editTaskId         = document.getElementById('edit-task-id');
+  const etTitle            = document.getElementById('et-title');
+  const etDescription      = document.getElementById('et-description');
+  const etPriority         = document.getElementById('et-priority');
+  const etStatus           = document.getElementById('et-status');
+  const etAssignee         = document.getElementById('et-assignee');
+  const etDueDate          = document.getElementById('et-duedate');
 
   // ─── Init ─────────────────────────────────────────────────────────────────
   init();
@@ -490,7 +528,339 @@ document.addEventListener('DOMContentLoaded', () => {
       teamLoaded = true;
       fetchTeam();
     }
+
+    if (name === 'tasks') {
+      fetchTasks();
+    }
   }
+
+  // ─── Project Tasks Tab ────────────────────────────────────────────────────
+  async function fetchTasks() {
+    tasksLoader.style.display = 'flex';
+    tasksContent.style.display = 'none';
+
+    try {
+      const res = await apiFetch(`/api/tasks?projectId=${projectId}`);
+      if (!res.ok) {
+        tasksLoader.style.display = 'none';
+        showToast('Failed to load tasks', true);
+        return;
+      }
+      const body = await res.json();
+      tasksList = body.data;
+      
+      // Also fetch project members if not already loaded to populate dropdowns
+      if (projectMembers.length === 0) {
+        const memRes = await apiFetch(`/api/projects/${projectId}/members`);
+        if (memRes.ok) {
+          const memBody = await memRes.json();
+          projectMembers = memBody.data;
+          populateAssigneeDropdowns();
+        }
+      }
+
+      renderTasks();
+    } catch (err) {
+      console.error('Tasks fetch error:', err);
+      tasksLoader.style.display = 'none';
+      showToast('Network error loading tasks', true);
+    }
+  }
+
+  function populateAssigneeDropdowns() {
+    const optionsHtml = `
+      <option value="">Unassigned</option>
+      ${projectMembers.map(m => `<option value="${m.userId._id}">${escapeHtml(m.userId.name)} (${escapeHtml(m.userId.role)})</option>`).join('')}
+    `;
+    taskAssignee.innerHTML = optionsHtml;
+    etAssignee.innerHTML = optionsHtml;
+  }
+
+  function renderTasks() {
+    tasksLoader.style.display = 'none';
+    tasksContent.style.display = 'block';
+
+    const statusFilter = filterTaskStatus.value;
+    const priorityFilter = filterTaskPriority.value;
+
+    const filtered = tasksList.filter(t => {
+      const matchStatus = !statusFilter || t.status === statusFilter;
+      const matchPriority = !priorityFilter || t.priority === priorityFilter;
+      return matchStatus && matchPriority;
+    });
+
+    tasksCountBadge.textContent = `${filtered.length} Task${filtered.length !== 1 ? 's' : ''}`;
+    tasksTableBody.innerHTML = '';
+
+    if (filtered.length === 0) {
+      tasksTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>No tasks match the selected filters or none have been created.</p>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    filtered.forEach(task => {
+      const tr = document.createElement('tr');
+      
+      let priorityClass = 'badge-info';
+      if (task.priority === 'Critical') priorityClass = 'badge-danger';
+      if (task.priority === 'High') priorityClass = 'badge-warning';
+      if (task.priority === 'Medium') priorityClass = 'badge-info';
+      if (task.priority === 'Low') priorityClass = 'badge-success';
+
+      const dueDateStr = task.dueDate ? fmtDate(task.dueDate) : '—';
+      const assigneeName = task.assignedTo ? task.assignedTo.name : '<em>Unassigned</em>';
+      const isLead = ['super admin', 'admin', 'project manager'].includes(activeRole);
+      const isAssignee = task.assignedTo && task.assignedTo._id.toString() === currentUser._id.toString();
+      const isCreator = task.createdBy && task.createdBy._id.toString() === currentUser._id.toString();
+      
+      const canEdit = isLead || isAssignee || isCreator;
+      const canDelete = isLead;
+
+      let statusSelector = '';
+      if (canEdit) {
+        statusSelector = `
+          <select class="form-control inline-status-select" data-id="${task._id}" style="padding:4px 8px;font-size:0.8rem;height:auto;background:transparent;width:120px;color:var(--text-primary);border:1px solid var(--border-glass);">
+            <option value="Todo" ${task.status === 'Todo' ? 'selected' : ''} style="background:var(--background-panel);">Todo</option>
+            <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''} style="background:var(--background-panel);">In Progress</option>
+            <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''} style="background:var(--background-panel);">Completed</option>
+            <option value="On Hold" ${task.status === 'On Hold' ? 'selected' : ''} style="background:var(--background-panel);">On Hold</option>
+          </select>
+        `;
+      } else {
+        statusSelector = `<span class="badge badge-info">${task.status}</span>`;
+      }
+
+      let editBtn = '';
+      let deleteBtn = '';
+
+      if (canEdit) {
+        editBtn = `<button class="btn btn-secondary edit-task-btn" data-id="${task._id}" style="padding:4px 8px;font-size:0.75rem;margin-right:5px;">Edit</button>`;
+      }
+      if (canDelete) {
+        deleteBtn = `<button class="btn btn-danger delete-task-btn" data-id="${task._id}" style="padding:4px 8px;font-size:0.75rem;background:var(--danger-color);border:none;">Delete</button>`;
+      }
+
+      tr.innerHTML = `
+        <td>
+          <div style="font-weight:600;color:var(--text-primary);">${escapeHtml(task.title)}</div>
+          <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;">${escapeHtml(task.description || 'No description')}</div>
+        </td>
+        <td>${statusSelector}</td>
+        <td><span class="badge ${priorityClass}">${task.priority}</span></td>
+        <td style="font-size:0.85rem;color:var(--text-primary);">${escapeHtml(assigneeName)}</td>
+        <td style="font-size:0.85rem;color:var(--text-secondary);">${dueDateStr}</td>
+        <td style="text-align:center;">
+          <div style="display:flex;gap:5px;justify-content:center;align-items:center;">
+            ${editBtn}
+            ${deleteBtn}
+          </div>
+        </td>
+      `;
+
+      tasksTableBody.appendChild(tr);
+    });
+
+    tasksTableBody.querySelectorAll('.inline-status-select').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const taskId = e.target.dataset.id;
+        const newStatus = e.target.value;
+        await updateTaskStatusInline(taskId, newStatus);
+      });
+    });
+
+    tasksTableBody.querySelectorAll('.edit-task-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const taskId = btn.dataset.id;
+        openEditTaskModal(taskId);
+      });
+    });
+
+    tasksTableBody.querySelectorAll('.delete-task-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const taskId = btn.dataset.id;
+        deleteTask(taskId);
+      });
+    });
+  }
+
+  async function updateTaskStatusInline(taskId, status) {
+    try {
+      const res = await apiFetch(`/api/tasks/${taskId}/status`, {
+        method: 'PATCH',
+        body: { status }
+      });
+      const body = await res.json();
+      if (res.ok && body.success) {
+        showToast('Task status updated!');
+        const idx = tasksList.findIndex(t => t._id === taskId);
+        if (idx !== -1) {
+          tasksList[idx].status = status;
+        }
+      } else {
+        showToast(body.message || 'Failed to update status', true);
+        fetchTasks();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error updating status', true);
+      fetchTasks();
+    }
+  }
+
+  async function deleteTask(taskId) {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+
+    try {
+      const res = await apiFetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
+      const body = await res.json();
+      if (res.ok && body.success) {
+        showToast('Task deleted successfully');
+        tasksList = tasksList.filter(t => t._id !== taskId);
+        renderTasks();
+      } else {
+        alert(body.message || 'Failed to delete task');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error');
+    }
+  }
+
+  // --- Add Task Modal Actions ---
+  addTaskBtn.addEventListener('click', () => {
+    addTaskForm.reset();
+    addTaskAlert.style.display = 'none';
+    addTaskAlert.className = 'alert';
+    addTaskModal.classList.add('active');
+  });
+
+  const closeAddTaskModal = () => addTaskModal.classList.remove('active');
+  addTaskCloseX.addEventListener('click', closeAddTaskModal);
+  addTaskCancel.addEventListener('click', closeAddTaskModal);
+
+  addTaskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    addTaskAlert.style.display = 'none';
+
+    const payload = {
+      title: taskTitle.value.trim(),
+      description: taskDescription.value.trim(),
+      priority: taskPriority.value,
+      status: taskStatus.value,
+      projectId: projectId,
+      assignedTo: taskAssignee.value || null,
+      dueDate: taskDueDate.value ? new Date(taskDueDate.value).toISOString() : null,
+    };
+
+    if (!payload.title) {
+      taskTitle.classList.add('is-invalid');
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/api/tasks', { method: 'POST', body: payload });
+      const body = await res.json();
+      if (res.ok && body.success) {
+        showToast('Task created successfully!');
+        closeAddTaskModal();
+        fetchTasks();
+      } else {
+        showModalAlert(addTaskAlert, body.message || 'Creation failed.');
+      }
+    } catch (err) {
+      showModalAlert(addTaskAlert, 'Network error.');
+    }
+  });
+
+  // --- Edit Task Modal Actions ---
+  function openEditTaskModal(taskId) {
+    const task = tasksList.find(t => t._id === taskId);
+    if (!task) return;
+
+    editTaskId.value = task._id;
+    etTitle.value = task.title;
+    etDescription.value = task.description || '';
+    etPriority.value = task.priority;
+    etStatus.value = task.status;
+    etAssignee.value = task.assignedTo ? task.assignedTo._id : '';
+    etDueDate.value = task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '';
+
+    editTaskAlert.style.display = 'none';
+    editTaskAlert.className = 'alert';
+
+    const isLead = ['super admin', 'admin', 'project manager'].includes(activeRole);
+    if (!isLead) {
+      document.querySelectorAll('#edit-task-modal .class-full-fields').forEach(el => {
+        el.style.opacity = '0.6';
+        el.style.pointerEvents = 'none';
+        const inputs = el.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => input.disabled = true);
+      });
+    } else {
+      document.querySelectorAll('#edit-task-modal .class-full-fields').forEach(el => {
+        el.style.opacity = '';
+        el.style.pointerEvents = '';
+        const inputs = el.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => input.disabled = false);
+      });
+    }
+
+    editTaskModal.classList.add('active');
+  }
+
+  const closeEditTaskModal = () => editTaskModal.classList.remove('active');
+  editTaskCloseX.addEventListener('click', closeEditTaskModal);
+  editTaskCancel.addEventListener('click', closeEditTaskModal);
+
+  editTaskForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    editTaskAlert.style.display = 'none';
+
+    const taskId = editTaskId.value;
+    const isLead = ['super admin', 'admin', 'project manager'].includes(activeRole);
+
+    let payload = {};
+    if (isLead) {
+      payload = {
+        title: etTitle.value.trim(),
+        description: etDescription.value.trim(),
+        priority: etPriority.value,
+        status: etStatus.value,
+        assignedTo: etAssignee.value || null,
+        dueDate: etDueDate.value ? new Date(etDueDate.value).toISOString() : null,
+      };
+      if (!payload.title) {
+        etTitle.classList.add('is-invalid');
+        return;
+      }
+    } else {
+      payload = {
+        status: etStatus.value
+      };
+    }
+
+    try {
+      const res = await apiFetch(`/api/tasks/${taskId}`, { method: 'PUT', body: payload });
+      const body = await res.json();
+      if (res.ok && body.success) {
+        showToast('Task updated successfully!');
+        closeEditTaskModal();
+        fetchTasks();
+      } else {
+        showModalAlert(editTaskAlert, body.message || 'Update failed.');
+      }
+    } catch (err) {
+      showModalAlert(editTaskAlert, 'Network error.');
+    }
+  });
+
+  filterTaskStatus.addEventListener('change', renderTasks);
+  filterTaskPriority.addEventListener('change', renderTasks);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   function statusClass(s) {
