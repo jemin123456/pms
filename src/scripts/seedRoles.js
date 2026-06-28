@@ -1,139 +1,105 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const Role = require('../modules/user/models/role.model');
-const User = require('../modules/user/models/user.model');
-const logger = require('../config/logger');
+const Role = require('../modules/user/roleModel');
+const logger = require('../utils/logger');
 
-const rolesData = [
+const roles = [
   {
     name: 'Super Admin',
-    code: 'SUPER_ADMIN',
-    permissions: [
-      { action: 'manage', subject: 'all' }
-    ]
+    description: 'Complete control over the system, roles, permissions, and audit logs.',
+    permissions: ['manage_all'],
   },
   {
     name: 'Admin',
-    code: 'ADMIN',
+    description: 'System administration, user creation, standard reports, and configurations.',
     permissions: [
-      { action: 'manage', subject: 'User' },
-      { action: 'manage', subject: 'Project' },
-      { action: 'manage', subject: 'Task' },
-      { action: 'manage', subject: 'Role' },
-      { action: 'manage', subject: 'Comment' }
-    ]
+      'read_user', 'create_user', 'update_user', 'delete_user',
+      'read_project', 'create_project', 'update_project', 'delete_project',
+      'read_task', 'create_task', 'update_task', 'delete_task',
+      'read_team', 'create_team', 'update_team', 'delete_team',
+      'read_report', 'export_report',
+      'read_attendance', 'manage_attendance',
+      'read_leave', 'manage_leave',
+      'read_budget', 'manage_budget'
+    ],
   },
   {
     name: 'Project Manager',
-    code: 'PROJECT_MANAGER',
+    description: 'Manages assigned projects, project teams, tasks, and workloads.',
     permissions: [
-      { action: 'read', subject: 'User' },
-      { action: 'create', subject: 'Project' },
-      { action: 'read', subject: 'Project' },
-      { action: 'update', subject: 'Project', conditions: { manager: '${user._id}' } },
-      { action: 'manage', subject: 'Task' },
-      { action: 'manage', subject: 'Comment' }
-    ]
+      'read_user',
+      'read_project', 'create_project', 'update_project',
+      'read_task', 'create_task', 'update_task', 'delete_task',
+      'read_team', 'create_team', 'update_team',
+      'read_report', 'export_report',
+      'read_attendance',
+      'read_leave', 'approve_leave',
+      'read_budget', 'create_budget', 'update_budget'
+    ],
   },
   {
     name: 'Team Lead',
-    code: 'TEAM_LEAD',
+    description: 'Leads sprint planning, tasks assignment, and workload tracking.',
     permissions: [
-      { action: 'read', subject: 'User' },
-      { action: 'read', subject: 'Project' },
-      { action: 'create', subject: 'Task' },
-      { action: 'read', subject: 'Task' },
-      { action: 'update', subject: 'Task', conditions: { teamLead: '${user._id}' } },
-      { action: 'manage', subject: 'Comment' }
-    ]
+      'read_user',
+      'read_project',
+      'read_task', 'create_task', 'update_task',
+      'read_team',
+      'read_report',
+      'read_attendance',
+      'read_leave'
+    ],
   },
   {
     name: 'Employee',
-    code: 'EMPLOYEE',
+    description: 'Regular team member working on tasks, logging time and attendance.',
     permissions: [
-      { action: 'read', subject: 'User' },
-      { action: 'read', subject: 'Project' },
-      { action: 'read', subject: 'Task' },
-      { action: 'update', subject: 'Task', conditions: { assignee: '${user._id}' } },
-      { action: 'manage', subject: 'Comment', conditions: { createdBy: '${user._id}' } }
-    ]
+      'read_user',
+      'read_project',
+      'read_task', 'update_task_status',
+      'read_attendance', 'log_attendance',
+      'read_leave', 'apply_leave',
+      'log_time'
+    ],
   },
   {
     name: 'Client',
-    code: 'CLIENT',
+    description: 'External client accessing project progress, deliverables, and reports.',
     permissions: [
-      { action: 'read', subject: 'Project', conditions: { client: '${user._id}' } },
-      { action: 'read', subject: 'Task' },
-      { action: 'create', subject: 'Comment' }
-    ]
-  }
+      'read_project',
+      'read_task',
+      'read_report',
+      'approve_deliverables',
+      'create_comment'
+    ],
+  },
 ];
 
-const seedDatabase = async () => {
+const seedRoles = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/epms';
-    logger.info(`Seeding database at ${mongoUri}...`);
-    
+    const mongoUri = process.env.MONGO_URI;
+    if (!mongoUri) {
+      throw new Error('MONGO_URI is not defined in environment variables.');
+    }
+
     await mongoose.connect(mongoUri);
+    logger.info('Connected to MongoDB for seeding roles...');
 
-    // Delete existing roles
+    // Clear existing roles
     await Role.deleteMany({});
-    logger.info('Deleted existing roles.');
+    logger.info('Cleared existing roles.');
 
-    // Seed roles
-    const createdRoles = await Role.insertMany(rolesData);
-    logger.info(`Seeded ${createdRoles.length} roles successfully.`);
+    // Insert standard roles
+    await Role.insertMany(roles);
+    logger.info('Successfully seeded default roles and permissions!');
 
-    // Find Super Admin Role ID
-    const superAdminRole = createdRoles.find(r => r.code === 'SUPER_ADMIN');
-
-    // Create a Super Admin user if not exists
-    const adminEmail = 'admin@epms.com';
-    let adminUser = await User.findOne({ email: adminEmail });
-
-    if (!adminUser) {
-      adminUser = new User({
-        email: adminEmail,
-        username: 'admin',
-        password: 'adminpassword123', // Will be hashed in pre-save hook
-        role: superAdminRole._id,
-        name: 'System Admin',
-        designation: 'CTO',
-        department: 'Management',
-        isEmailVerified: true
-      });
-      await adminUser.save();
-      logger.info(`Created default Super Admin user: ${adminEmail} (password: adminpassword123)`);
-    } else {
-      logger.info('Super Admin user already exists.');
-    }
-
-    // Seed a couple of standard roles users for testing
-    const employeeRole = createdRoles.find(r => r.code === 'EMPLOYEE');
-    const employeeEmail = 'employee@epms.com';
-    let employeeUser = await User.findOne({ email: employeeEmail });
-
-    if (!employeeUser) {
-      employeeUser = new User({
-        email: employeeEmail,
-        username: 'employee',
-        password: 'employeepassword123',
-        role: employeeRole._id,
-        name: 'John Doe',
-        designation: 'Software Engineer',
-        department: 'Engineering',
-        isEmailVerified: true
-      });
-      await employeeUser.save();
-      logger.info(`Created default Employee user: ${employeeEmail} (password: employeepassword123)`);
-    }
-
-    logger.info('Database seeding completed successfully!');
+    await mongoose.disconnect();
+    logger.info('Disconnected from MongoDB.');
     process.exit(0);
   } catch (error) {
-    logger.error(`Seeding database failed: ${error.message}`, error);
+    logger.error(`Seeding failed: ${error.message}`);
     process.exit(1);
   }
 };
 
-seedDatabase();
+seedRoles();

@@ -1,11 +1,9 @@
 const router = require('./routes');
 const service = require('./service');
 const controller = require('./controller');
-const abilityFactory = require('./abilityFactory');
 
 module.exports = {
   router,
   service,
   controller,
-  abilityFactory,
 };

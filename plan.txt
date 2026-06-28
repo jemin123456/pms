@@ -1453,141 +1453,6 @@ Return proper HTTP Status.
 
 Never return stack trace.
 
---------------------------------------
-
-Logging
-
-Morgan
-
-Winston
-
-Error Logs
-
-Request Logs
-
-Audit Logs
-
---------------------------------------
-
-Security
-
-Helmet
-
-CORS
-
-Rate Limiter
-
-Mongo Sanitization
-
-XSS Protection
-
-Compression
-
-Cookie Security
-
-JWT Expiration
-
-Password Hashing
-
-bcrypt
-
-Secure Headers
-
-Input Sanitization
-
-CSRF protection where applicable
-
---------------------------------------
-
-Project Features
-
-Authentication
-
-User Management
-
-Roles
-
-Permissions
-
-Projects
-
-Tasks
-
-Subtasks
-
-Checklist
-
-Comments
-
-Mentions
-
-Notifications
-
-Dashboard
-
-Calendar
-
-Kanban
-
-Gantt
-
-Reports
-
-Attendance
-
-Leave
-
-Meetings
-
-Budget
-
-Time Tracking
-
-Documents
-
-Search
-
-Activity Timeline
-
-Analytics
-
-Settings
-
---------------------------------------
-
-Task Features
-
-Priority
-
-Labels
-
-Due Date
-
-Dependencies
-
-Recurring
-
-Estimated Hours
-
-Actual Hours
-
-Progress
-
-Status
-
-Assignment
-
-History
-
-Attachments
-
-Comments
-
-Watchers
-
-Followers
-
---------------------------------------
 
 Dashboard
 
@@ -1777,28 +1642,6 @@ Deployment Guide
 
 --------------------------------------
 
-Development Order
-
-Step 1
-Create folder structure.
-
-Step 2
-Install dependencies.
-
-Step 3
-Database connection.
-
-Step 4
-Authentication.
-
-Step 5
-Authorization.
-
-Step 6
-Project Module.
-
-Step 7
-Task Module.
 
 Continue module by module.
 
@@ -1829,3 +1672,13 @@ Repositories contain database queries only.
 No business logic inside routes.
 
 Follow this architecture consistently throughout the project.
+
+
+// user 
+
+mongo url to : mongodb+srv://jemin:jemin@cluster0.nbncz2g.mongodb.net/pms
+not try to host on any platrom like docure or somthing
+
+
+
+in authentication user refresh and access token and handel it from Frontend
