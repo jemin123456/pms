@@ -92,7 +92,7 @@ exports.register = async (req, res, next) => {
         memberships: [
           {
             tenantId: tenant._id,
-            role: 'admin',
+            role: 'super admin', // Company founder gets full unrestricted access
           },
         ],
       });
@@ -227,10 +227,10 @@ exports.addEmployee = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'User is already an employee in this workspace' });
     }
 
-    // Add employee membership
+    // Add employee membership (default role: 'developer')
     employee.memberships.push({
       tenantId: req.tenantId,
-      role: 'employee',
+      role: 'developer',
     });
 
     await employee.save();
@@ -294,10 +294,10 @@ exports.createWorkspace = async (req, res, next) => {
       slug: slug.toLowerCase(),
     });
 
-    // Add admin membership
+    // Workspace creator becomes super admin of new workspace
     req.user.memberships.push({
       tenantId: tenant._id,
-      role: 'admin',
+      role: 'super admin',
     });
 
     await req.user.save();
