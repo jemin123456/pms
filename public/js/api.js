@@ -124,3 +124,56 @@ function handleSessionExpired() {
     window.location.href = '/login.html?expired=true';
   }
 }
+
+export function showConfirm(title, message) {
+  return new Promise((resolve) => {
+    let overlay = document.getElementById('confirm-modal-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'confirm-modal-overlay';
+      overlay.className = 'confirm-modal-overlay';
+      overlay.innerHTML = `
+        <div class="confirm-modal">
+          <div class="confirm-title" id="confirm-modal-title">Confirm Action</div>
+          <div class="confirm-message" id="confirm-modal-message">Are you sure you want to proceed?</div>
+          <div class="confirm-buttons">
+            <button id="confirm-modal-cancel" class="btn btn-secondary" style="padding: 8px 16px; font-size: 0.85rem;">Cancel</button>
+            <button id="confirm-modal-ok" class="btn btn-primary" style="padding: 8px 16px; font-size: 0.85rem; background: var(--danger-color); box-shadow: none;">Confirm</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    document.getElementById('confirm-modal-title').textContent = title;
+    document.getElementById('confirm-modal-message').textContent = message;
+
+    const okBtn = document.getElementById('confirm-modal-ok');
+    const cancelBtn = document.getElementById('confirm-modal-cancel');
+
+    const handleConfirm = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    const cleanup = () => {
+      overlay.classList.remove('active');
+      okBtn.removeEventListener('click', handleConfirm);
+      cancelBtn.removeEventListener('click', handleCancel);
+    };
+
+    okBtn.addEventListener('click', handleConfirm);
+    cancelBtn.addEventListener('click', handleCancel);
+
+    // Trigger animation
+    setTimeout(() => {
+      overlay.classList.add('active');
+    }, 10);
+  });
+}
+

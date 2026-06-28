@@ -1,4 +1,4 @@
-import { apiFetch, getActiveTenantId, setActiveTenantId } from "./api.js";
+import { apiFetch, getActiveTenantId, setActiveTenantId, showConfirm } from "./api.js";
 console.log("dashbord fiel is link");
 document.addEventListener("DOMContentLoaded", () => {
   let projects = [];
@@ -595,7 +595,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function toggleUserStatus(id, action) {
-    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+    const isConfirmed = await showConfirm(`Confirm ${action}`, `Are you sure you want to ${action} this user?`);
+    if (!isConfirmed) return;
 
     try {
       const res = await apiFetch(`/api/user-management/users/${id}/${action}`, {
@@ -659,10 +660,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function deleteProjectRecord(id) {
-    if (
-      !confirm("Are you sure you want to permanently delete this IT project?")
-    )
-      return;
+    const isConfirmed = await showConfirm("Delete Project", "Are you sure you want to permanently delete this IT project?");
+    if (!isConfirmed) return;
 
     try {
       const res = await apiFetch(`/api/projects/${id}`, {
